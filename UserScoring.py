@@ -1,4 +1,6 @@
 import snowflake.connector
+from Utils.ltv_model import *
+
 
 class UserScoring():
     def __init__(self):
@@ -52,6 +54,25 @@ class UserScoring():
         self.parameters_set = is_parameters_set
         return is_parameters_set
         
+    def userScoring(snowflake_table_train_name, train_table_attributes, 
+                null_threshold, test_proportion, bootstrap_type, 
+                depth, learning_rate, loss_function, iteration,
+                snowflake_table_pred_name, pred_table_attributes,
+                bucket, prefix, csv_name):
+
+        df, X, Y = data_prep(snowflake_table_train_name, 
+                            train_table_attributes, null_threshold)
+        
+        clf, categorical_feature_indicies = train_model(X, Y, test_proportion,
+                                                        bootstrap_type, depth, 
+                                                        learning_rate, loss_function,
+                                                        iteration)
+
+        csv_files = model_prediction(snowflake_table_pred_name, pred_table_attributes, clf, X, bucket, prefix, csv_name)
+
+        #csv files [(csv, filename), (csv, filename) ....]
+        for file in csv_files:
+            print(file[1])
         
 
         

@@ -1,7 +1,7 @@
 # from ChaliceAPIUsage.APIConnection import *
-from Catboost_SMOTE import *
-from ltv_model import *
-from TTD_user_score_upload import *
+from Utils.Catboost_SMOTE import *
+from Utils.ltv_model import *
+from Utils.TTD_user_score_upload import *
 from ltv_params import *
 import warnings
 import time
