@@ -1,10 +1,20 @@
 import snowflake.connector
-from Utils.ltv_model import *
+from Utils.run_ltv_pred import *
 
 
 class UserScoring():
+
+    # Class Variables
+    # Connection to snowflake
+    sf_conn = snowflake.connector.connect(
+        user='TUCKER_DEV',
+        password='RemoteAccess1',
+        account='mja29153.us-east-1',
+    )
+    ctx = sf_conn.cursor()
+
     def __init__(self):
-        
+        # Instance Variables
         # Data Location
         self.train_table_name = None
         self.train_table_attributes = None
@@ -29,19 +39,10 @@ class UserScoring():
         # Output File(s) name
         self.csv_file_name = None
 
-        # Connection to snowflake
-        self._sf_conn = snowflake.connector.connect(
-            user='TUCKER_DEV',
-            password='RemoteAccess1',
-            account='mja29153.us-east-1',
-        )
-        self._ctx = self._sf_conn.cursor()
-
         # Check for parameters
         self.parameters_set = None
 
     def isParametersSet(self):
-
         if(self.parameters_set == True):
             return True
 
