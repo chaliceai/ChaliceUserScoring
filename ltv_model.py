@@ -104,37 +104,4 @@ def catboost_prediction(df_piq, clf, X):
     df_piq['ltv'] = df_ltv['LTV']
     #df_piq.to_csv('chalice_test_daids.csv')
     return df_piq
-
-
-def model_prediction(snowflake_table_pred_name, table_attributes, clf, X, bucket, prefix, csv_name):
-    ctx = snowflake.connector.connect(
-      user='TYLYNN',
-      account='mja29153.us-east-1',
-      password = 'Brenn1025!',
-      warehouse='TABLEAU_L',
-      database='CLIENT',
-      schema='PROGRESSIVE'
-      )
-    cur = ctx.cursor()
-    attrbutes = table_attributes.join(',')
-   
-    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name}"
-    cur.execute(sql)
-    list_of_csvs = []
-    for i, df in enumerate(cur.fetch_pandas_batches()):
-        df = catboost_prediction(df, clf, X)
-        df = daid_format_pandas(df)
-        csv_name.removesuffix('.com')
-        csv_name = f"{csv_name}_{i}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv"
-        df = pandas_push_to_s3(df, bucket, prefix, csv_name)
-        list_of_csvs.append(df)
-
-    cur.close()
-    ctx.close()
-    return list_of_csvs
-
-    
-
-
-
     
