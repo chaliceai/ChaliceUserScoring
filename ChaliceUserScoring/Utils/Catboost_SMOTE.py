@@ -66,14 +66,14 @@ def catboost_regression(X_train, X_val, Y_train, Y_val, bootstrap_type,depth,lea
     categorical_features_indices = np.where(X_train.dtypes != np.float)[0]
 
     clf=CatBoostRegressor(iterations=iteration, 
-                        depth=6, 
-                        learning_rate=0.05,
+                        depth=depth, 
+                        learning_rate=learning_rate,
                         bagging_temperature = 0.5, 
                         custom_metric=['RMSE', 'R2'],
                         #per_float_feature_quantization='3:border_count=1024',
-                        bootstrap_type='MVS',
+                        bootstrap_type=bootstrap_type,
                         l2_leaf_reg = 10,
-                        loss_function='RMSE')
+                        loss_function=loss_function)
     
     clf.fit(X_train, Y_train, cat_features=categorical_features_indices, eval_set=(X_val, Y_val), use_best_model=True,plot=False,verbose=False)
     

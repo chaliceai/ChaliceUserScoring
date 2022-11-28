@@ -25,7 +25,7 @@ bootstrap_type='MVS'
 depth=6
 learning_rate=0.05
 loss_function= 'RMSE'
-iteration=1000#("Enter Number of Iternations")#100
+iteration=1000
 test_proportion=0.3
 
 # Data Formatting
