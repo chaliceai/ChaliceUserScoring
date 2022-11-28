@@ -3,20 +3,14 @@ import boto3
 import json
 
 class UserScoring:
-    # Class Variables
-    # Connection to snowflake
-    
 
-    # s3_access = None
-
-    # def __del__(self):
-    #     self.sf_conn.close()
-    #     self.sf_cur.close()
+    def __del__(self):
+        self.sf_conn.close()
+        self.sf_cur.close()
 
     
     def __init__(self):
 
-        print('Constructor')
         # Instance Variables
         # Data Location
         self.train_table_name = None
@@ -25,9 +19,8 @@ class UserScoring:
         self.prediction_table_name = None
         self.prediction_table_attributes = None
 
-        self.null_threshold = None
-
         # Catboost Modeling
+        self.null_threshold = None
         self.bootstrap_type = None
         self.depth = None
         self.learning_rate = None
@@ -45,37 +38,29 @@ class UserScoring:
         # Check for parameters
         self.parameters_set = None
 
-        #list for output file(s)
+        # list for output file(s)
         self.csv_files_list = []
 
-        #snowflake connection
-        # self.sf_conn = snowflake.connector.connect(
-        #     user='TYLYNN',
-        #     account='mja29153.us-east-1',
-        #     password = 'Brenn1025!',
-        #     warehouse='TABLEAU_L',
-        #     database='CLIENT',
-        #     schema='PROGRESSIVE'
-        # )
-
-        # self.sf_cur = self.sf_conn.cursor()
-        self.sf_conn = None
-
-
-
     def setSnowflakeConnection(self):
-        client = boto3.client('secretsmanager')
-        print(f"connected to chalice-dev-config-snowflake-credentials", flush=True)
-        snowflake_credentials = client.get_secret_value(SecretId='chalice-dev-config-snowflake-credentials') # Hardcoded Secret name
-        print(f"connected to chalice-dev-config-snowflake-credentials", flush=True)
-        snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
-        print(f"connected to chalice-dev-config-snowflake-credentials {snowflake_credentials}", flush=True)
-        self.sf_conn = snowflake.connector.connect(
-            user = snowflake_credentials['dbUser'],
-            account = snowflake_credentials['dbAccount'],
-            password = snowflake_credentials['dbPassword']
-        )
-        print(f"connected to chalice-dev-config-snowflake-credentials", flush=True)
+
+        try:
+            client = boto3.client('secretsmanager')
+            snowflake_credentials = client.get_secret_value(SecretId='chalice-dev-config-snowflake-credentials') # Hardcoded Secret name
+            snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
+
+            self.sf_conn = snowflake.connector.connect(
+                user = snowflake_credentials['dbUser'],
+                account = snowflake_credentials['dbAccount'],
+                password = snowflake_credentials['dbPassword']
+            )
+
+            self.sf_cur = self.sf_conn.cursor()
+            print('Sucessfully connected to snowflake')
+
+        except Exception as err:
+            print(err)
+
+        
 
 
     def isParametersSet(self):
