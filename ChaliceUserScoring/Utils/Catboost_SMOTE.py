@@ -1,10 +1,8 @@
 #Installing all necessary packages 
-
 import numpy as np
 from dateutil.easter import *
 from sklearn.model_selection import train_test_split
 from catboost import Pool, CatBoostClassifier
-import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTENC
 
 def testtrainsplit(X,Y,test_proportion):
@@ -25,7 +23,7 @@ def run_smote(X_train, Y_train, sampling, knn):
 
 def catmodel(X_train, X_val, Y_train, Y_val, bootstrap_type, class_weights, depth, learning_rate,loss_function):
     categorical_features_indices = np.where(X_train.dtypes != np.float)[0]
-    print(categorical_features_indices)
+
 
     clf = CatBoostClassifier(
         iterations=200,
@@ -43,12 +41,8 @@ def catmodel(X_train, X_val, Y_train, Y_val, bootstrap_type, class_weights, dept
             cat_features=categorical_features_indices, 
             eval_set=(X_val, Y_val),
             use_best_model=True,
-            plot = True, 
+            plot = False, 
             verbose=False)
-    print('CatBoost model is fitted: ' + str(clf.is_fitted()))
-    print('CatBoost model parameters:' + str(clf.get_params()))
-    print('Best Score:' + str(clf.get_best_score()))
-    print('Best Iteration:' + str(clf.get_best_iteration()))
     
     import shap
     shap_values = clf.get_feature_importance(Pool(X_val, label=Y_val,cat_features=categorical_features_indices), 
@@ -58,8 +52,61 @@ def catmodel(X_train, X_val, Y_train, Y_val, bootstrap_type, class_weights, dept
 
     shap.initjs()
     shap.force_plot(expected_value, shap_values[3,:], X_val.iloc[3,:])
+
     shap.summary_plot(shap_values, X_val, show = False)
-    plt.savefig('shap_plot.png')
+
+    
+    return clf, categorical_features_indices
+
+def catboost_regression(X_train, X_val, Y_train, Y_val, bootstrap_type,depth,learning_rate,loss_function, iteration):
+    categorical_features_indices = np.where(X_train.dtypes != np.float)[0]
+
+    import shap
+    from catboost import CatBoostRegressor
+    categorical_features_indices = np.where(X_train.dtypes != np.float)[0]
+
+    clf=CatBoostRegressor(iterations=iteration, 
+                        depth=6, 
+                        learning_rate=0.05,
+                        bagging_temperature = 0.5, 
+                        custom_metric=['RMSE', 'R2'],
+                        #per_float_feature_quantization='3:border_count=1024',
+                        bootstrap_type='MVS',
+                        l2_leaf_reg = 10,
+                        loss_function='RMSE')
+    
+    clf.fit(X_train, Y_train, cat_features=categorical_features_indices, eval_set=(X_val, Y_val), use_best_model=True,plot=False,verbose=False)
+    
+    print('Best Iteration:')
+    print(clf.get_best_iteration())
+    res = clf.get_best_score()['learn']
+    r2 = res['R2']
+    rmse = res['RMSE']
+    
+    print('Train Metrics:')
+    print('R2:',r2)
+    print('RMSE:',rmse)
+    
+    res2 = clf.get_best_score()['validation']
+    r2_2 = res2['R2']
+    rmse_2 = res2['RMSE']
+    
+    print('Train Metrics:')
+    print('R2:',r2_2)
+    print('RMSE:',rmse_2)
+
+
+    shap_values = clf.get_feature_importance(Pool(X_val, label=Y_val,cat_features=categorical_features_indices), 
+                                                                         type="ShapValues")
+    expected_value = shap_values[0,-1]
+    shap_values = shap_values[:,:-1]
+
+    shap.initjs()
+    shap.force_plot(expected_value, shap_values[3,:], X_val.iloc[3,:])
+
+    shap.summary_plot(shap_values, X_val)
+    ##Feature importance
+    clf.get_feature_importance(prettified=True)
     
     return clf, categorical_features_indices
     
@@ -75,6 +122,7 @@ def catboost_smote(X_train, Y_train, X_val, Y_val, use_smote):
     else: clf, categorical_feature_indices = catmodel(X_train, X_val, Y_train, Y_val)
         
     return clf, categorical_feature_indices
+
         
 def reduce_model_dim(drop_columns, X_train, X_val):
     X_train = X_train.drop(drop_columns, 1)
@@ -84,6 +132,7 @@ def reduce_model_dim(drop_columns, X_train, X_val):
 def grid_search(cat_cols, X, Y):
     #Hyperparameter tuning can be used to improve the model. 
     #This takes a long time to run 
+
     #Making scoring function 
     from sklearn.metrics import make_scorer, roc_auc_score, accuracy_score, recall_score, f1_score
 
@@ -96,12 +145,16 @@ def grid_search(cat_cols, X, Y):
           pass
 
         return score
+
+
     #Set up metrics for Grid Search
     acc = make_scorer(custom_scorer, actual_scorer = accuracy_score)
     auc_score = make_scorer(custom_scorer, actual_scorer = roc_auc_score, 
                             needs_threshold=True) # <== Added this to get correct roc
     recall = make_scorer(custom_scorer, actual_scorer = recall_score)
     f1 = make_scorer(custom_scorer, actual_scorer = f1_score)
+
+
     #Grid Search Exploration
     from sklearn.model_selection import GridSearchCV
     # convert categorical columns to integers
@@ -111,7 +164,10 @@ def grid_search(cat_cols, X, Y):
         X[header] = X[header].astype('category').cat.codes
 
     X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.2, random_state=0)
+
+
     clf = CatBoostClassifier()
+
     parameters = {'depth'         : [6,8,10],
                 'learning_rate' : [0.05, 0.1,0.5],
                 'iterations'    : [100,250,300],
@@ -119,7 +175,7 @@ def grid_search(cat_cols, X, Y):
                 'loss_function' : ['Logloss'],
                 'class_weights' : [[0.3,0.7], [0.4, 0.6], [0.5,0.5], [0.1,0.9]]
                      }
-                    
+
     grid = GridSearchCV(estimator=clf, 
                         param_grid = parameters, 
                         cv = 3, 
@@ -136,8 +192,10 @@ def grid_search(cat_cols, X, Y):
     print("\n The best score across ALL searched params:\n", grid.best_score_)
     print("\n The best parameters across ALL searched params:\n", grid.best_params_)
     
+
 def cross_validation(iterations, learning_rate, X, Y, cat_feature_indices, stratified_bool_val):
     ###Cross Validation for Model Assessment
+
     from catboost import cv
 
     params = {}

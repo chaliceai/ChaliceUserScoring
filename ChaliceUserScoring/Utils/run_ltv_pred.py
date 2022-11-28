@@ -1,8 +1,7 @@
 # from ChaliceAPIUsage.APIConnection import *
-from Utils.Catboost_SMOTE import *
-from Utils.ltv_model import *
-from Utils.TTD_user_score_upload import *
-from ltv_params import *
+from ChaliceUserScoring.Utils.Catboost_SMOTE import testtrainsplit, catboost_regression
+from ChaliceUserScoring.Utils.ltv_model import *
+from ChaliceUserScoring.Utils.TTD_user_score_upload import *
 import warnings
 import time
 warnings.filterwarnings("ignore")
@@ -19,13 +18,13 @@ DOES:
     formats data to be usable
     returns df w/ data, and 2 more df's with specific data
 """
-def data_prep(snowflake_table_train_name, train_table_attributes, 
+def data_prep(cur, snowflake_table_train_name, train_table_attributes, 
               null_threshold):
 
-    df = training_data(snowflake_table_train_name, train_table_attributes)
+    df = training_data(cur, snowflake_table_train_name, train_table_attributes)
 
-    dataframe = fix_nulls_and_types(df, nulls='Yes', types='Yes',
-                                    val=0, null_threshold=null_threshold)
+    dataframe = fix_nulls_and_types(df, null_threshold, nulls='Yes', types='Yes',
+                                    val=0)
     X, Y= log_transform(dataframe)
     
     return df, X, Y
@@ -63,10 +62,10 @@ NEEDS:
 DOES:
     runs model prediction
 """
-def model_prediction(snowflake_table_pred_name, pred_table_attributes, clf, X):
-    df_piq = prediction_data(snowflake_table_pred_name, pred_table_attributes)
-    df_piq = catboost_prediction(df_piq, clf, X)
-    return df_piq
+# def model_prediction(snowflake_table_pred_name, pred_table_attributes, clf, X):
+#     df_piq = prediction_data(snowflake_table_pred_name, pred_table_attributes)
+#     df_piq = catboost_prediction(df_piq, clf, X)
+#     return df_piq
 
 
 """
@@ -79,56 +78,10 @@ Does:
     formats csv
     pushes csv to s3
 """
-def format_results(csv_name):
+def format_results(csv_name, bucket, prefix):
     daids = daid_format(csv_name = csv_name)
     push_to_s3(csv_name=csv_name, bucket=bucket, prefix=prefix)
     return daids
-
-
-"""
-NEEDS:
-    Number of files?
-    User for chaliceapiusage
-    advertiser_id for post req
-    csv file
-    *** segment_name='LTVUploadOctober') add timetamp
-DOES:
-    posts csv file to ttd
-
-pandas chunks
-"""
-def push_to_TTD(USER, ADVERTISER_ID , file_name, segment_name, NUM_FILES=1,):
-    from ChaliceAPIUsage.APIConnection import TradedeskAPIConnection
-    conn = TradedeskAPIConnection(USER)
-    conn.set_secret(advertiser_id=ADVERTISER_ID,
-                    secret_key='uar6lmos5mfccyjb26yhcepab3bmccel') #needs to be generalized
-
-    # s3://tradedesk-uploads/daids_user_scores/chalice_demo/chalice_test_daids.csv'
-    failed_files = 0
-    t1 = time.time()
-    results = []
-    for i in range(NUM_FILES):
-        print(f'Uploading chunk {i + 1}/{NUM_FILES}')
-        print(file_name.format(i + 1))
-        try:
-            result = conn.post_data(advertiser_id=ADVERTISER_ID,
-                                scores_csv=file_name.format(i + 1),
-                                segment_name=segment_name)
-        except UnicodeDecodeError as e:
-            print(f'**FAILED** Unable to read {file_name.format(i + 1)}. Skipping...')
-            failed_files += 1
-            continue
-        except Exception as e:
-            print(f'**FAILED** Upload of {file_name.format(i + 1)} failed due to {type(e)}. Skipping...')
-            failed_files += 1
-            raise e
-        results.append(result)
-    t2 = time.time()
-    print(f'Success! Completed at: {dt.datetime.now()}. Time elapsed: {t2 - t1}')
-    print('Total IDs Submitted:', sum([x["TotalIDs"] for x in results]))
-    print('Total Lines with Errors:', sum([x['FailedIDs'] for x in results]))
-    print(f'Number of files skipped due to error: {failed_files}')
-    
 
     
 """
@@ -175,3 +128,18 @@ def userScoring(snowflake_table_train_name, train_table_attributes,
         print(file[1])
 
     
+def model_prediction(snowflake_table_pred_name, table_attributes, clf, X, bucket, prefix, csv_name, cur):
+    attrbutes = table_attributes.join(',')
+   
+    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name}"
+    cur.execute(sql)
+    list_of_csvs = []
+    for i, df in enumerate(cur.fetch_pandas_batches()):
+        df = catboost_prediction(df, clf, X)
+        df = daid_format_pandas(df)
+        csv_name.removesuffix('.csv')
+        csv_name = f"{csv_name}_{i}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+        df = pandas_push_to_s3(df, bucket, prefix, csv_name)
+        list_of_csvs.append(df)
+
+    return list_of_csvs

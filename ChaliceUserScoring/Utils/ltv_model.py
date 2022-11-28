@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 # from dateutil.easter import *
-from ltv_params import *
-from Utils.TTD_user_score_upload import *
+from ChaliceUserScoring.Utils.TTD_user_score_upload import *
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -15,30 +14,19 @@ should take in :
     traininng table name
     training table attributes list
 """
-def training_data(snowflake_table_train, table_attributes,sample_size=None): 
-    ctx = snowflake.connector.connect(
-      user='TYLYNN',
-      account='mja29153.us-east-1',
-      password = 'Brenn1025!',
-      warehouse='TABLEAU_L',
-      database='CLIENT',
-      schema='PROGRESSIVE'
-      )
-    cur = ctx.cursor()
+def training_data(cur, snowflake_table_train, table_attributes,sample_size=None): 
+
     attributes = table_attributes.join(',')
-    
-    sql = f"SELECT {attributes} FROM {snowflake_table_train}"
+    sql = f"SELECT {attributes} FROM {snowflake_table_train} LIMIT 1000" #LIMIT ADDED FOR TESTING
     if(sample_size != None):
         sql = sql + f"sample({sample_size})"
 
     cur.execute(sql)
     df = cur.fetch_pandas_all()
-    cur.close()
-    ctx.close()     
     return df
 
 #looks good
-def fix_nulls_and_types(dataframe, nulls = 'Yes', types = 'Yes', val = 0, null_threshold=null_threshold):
+def fix_nulls_and_types(dataframe, null_threshold, nulls = 'Yes', types = 'Yes', val = 0):
     if nulls == "Yes":
         dataframe = dataframe.loc[:, dataframe.isnull().sum() < null_threshold * dataframe.shape[0]]
         dataframe = dataframe.fillna(value = val)
