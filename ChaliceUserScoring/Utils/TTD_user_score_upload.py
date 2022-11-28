@@ -27,14 +27,9 @@ def daid_format_pandas(daids):
 
 def pandas_push_to_s3(df, bucket, prefix, file_name):
     import boto3
-    # Creating Session With Boto3.
-    session = boto3.Session(
-    aws_access_key_id='AKIA2XH7LDGPOVEIQWUT',
-    aws_secret_access_key='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'
-    )
 
     # Creating S3 Resource From the Session.
-    s3_res = session.resource('s3')
+    s3_res = boto3.resource('s3')
     csv_buffer = StringIO()
     prefix = f"{prefix}/{file_name}"
     df.to_csv(csv_buffer)

@@ -84,62 +84,19 @@ def format_results(csv_name, bucket, prefix):
     return daids
 
     
-"""
-Ideal Function:
-
-    takes in
-        training table name
-        training table attributes list
-        null threshold float
-        test proportion float
-        prediction table name
-        predictioin table attributes list
-
-    runs 
-        data_prep
-        train_model
-        model_prediction
-        format_results
-        push to s3
-
-    does not:
-        push to ttd
-"""
-
-def userScoring(snowflake_table_train_name, train_table_attributes, 
-                null_threshold, test_proportion, bootstrap_type, 
-                depth, learning_rate, loss_function, iteration,
-                snowflake_table_pred_name, pred_table_attributes,
-                bucket, prefix, csv_name):
-
-    df, X, Y = data_prep(snowflake_table_train_name, 
-                         train_table_attributes, null_threshold)
     
-    clf, categorical_feature_indicies = train_model(X, Y, test_proportion,
-                                                    bootstrap_type, depth, 
-                                                    learning_rate, loss_function,
-                                                    iteration)
-
-    csv_files = model_prediction(snowflake_table_pred_name, pred_table_attributes, clf, X, bucket, prefix, csv_name)
-
-    #csv files [(csv, filename), (csv, filename) ....]
-
-    for file in csv_files:
-        print(file[1])
-
-    
-def model_prediction(snowflake_table_pred_name, table_attributes, clf, X, bucket, prefix, csv_name, cur):
-    attrbutes = table_attributes.join(',')
+def model_prediction(snowflake_table_pred_name, table_attributes, clf, X,
+                     bucket, prefix, csv_name, cur):
+    attrbutes = ', '.join(table_attributes)
    
-    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name}"
+    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name} LIMIT 1000" #ADDED LIMIT FOR TESTING
     cur.execute(sql)
     list_of_csvs = []
     for i, df in enumerate(cur.fetch_pandas_batches()):
         df = catboost_prediction(df, clf, X)
         df = daid_format_pandas(df)
-        csv_name.removesuffix('.csv')
-        csv_name = f"{csv_name}_{i}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv"
-        df = pandas_push_to_s3(df, bucket, prefix, csv_name)
+        csv_name = csv_name.removesuffix('.csv')
+        df = pandas_push_to_s3(df, bucket, prefix, f"{csv_name}_{i + 1}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv")
         list_of_csvs.append(df)
 
     return list_of_csvs

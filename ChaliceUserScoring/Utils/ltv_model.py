@@ -16,7 +16,7 @@ should take in :
 """
 def training_data(cur, snowflake_table_train, table_attributes,sample_size=None): 
 
-    attributes = table_attributes.join(',')
+    attributes = ', '.join(table_attributes)
     sql = f"SELECT {attributes} FROM {snowflake_table_train} LIMIT 1000" #LIMIT ADDED FOR TESTING
     if(sample_size != None):
         sql = sql + f"sample({sample_size})"

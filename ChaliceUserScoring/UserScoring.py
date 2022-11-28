@@ -36,7 +36,7 @@ class UserScoring:
         self.csv_file_name = None
 
         # Check for parameters
-        self.parameters_set = None
+        self.parameters_set = False
 
         # list for output file(s)
         self.csv_files_list = []
@@ -51,7 +51,8 @@ class UserScoring:
             self.sf_conn = snowflake.connector.connect(
                 user = snowflake_credentials['dbUser'],
                 account = snowflake_credentials['dbAccount'],
-                password = snowflake_credentials['dbPassword']
+                password = snowflake_credentials['dbPassword'],
+                warehouse = 'COMPUTE_WH'
             )
 
             self.sf_cur = self.sf_conn.cursor()
@@ -70,7 +71,7 @@ class UserScoring:
         is_parameters_set = True
         for param, value in self.__dict__.items():
             if(value == None):
-               print(f"Please set the '{param}' parameter before running this function")
+               print(f"Please set the '{param}' attribute before running this function")
                is_parameters_set = False
 
         self.parameters_set = is_parameters_set
