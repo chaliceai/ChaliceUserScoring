@@ -4,101 +4,157 @@ import json
 
 class UserScoring:
 
+
     def __del__(self):
-        self.sf_conn.close()
-        self.sf_cur.close()
+        self._sf_conn.close()
+        self._sf_cur.close()
 
     
-    def __init__(self):
+    def __init__(self, train_table_name=None, train_table_attributes=None, 
+                 prediction_table_name=None, prediction_table_attributes=None,
+                 null_threshold=0.5, bootstrap_type='MVS', depth=6,
+                 loss_function='RMSE', iteration=1000, test_proportion=0.3,
+                 learning_rate=0.05, s3_bucket=None, s3_prefix=None, 
+                 csv_file_name=None):
 
         # Instance Variables
         # Data Location
-        self.train_table_name = None
-        self.train_table_attributes = None
+        self._train_table_name = train_table_name
+        self._train_table_attributes = train_table_attributes
 
-        self.prediction_table_name = None
-        self.prediction_table_attributes = None
+        self._prediction_table_name = prediction_table_name
+        self._prediction_table_attributes = prediction_table_attributes
 
         # Catboost Modeling
-        self.null_threshold = None
-        self.bootstrap_type = None
-        self.depth = None
-        self.learning_rate = None
-        self.loss_function = None
-        self.iteration = None
-        self.test_proportion = None
+        self._null_threshold = null_threshold
+        self._bootstrap_type = bootstrap_type
+        self._depth = depth
+        self._learning_rate = learning_rate
+        self._loss_function = loss_function
+        self._iteration = iteration
+        self._test_proportion = test_proportion
 
         # Bucket Location
-        self.s3_bucket = None
-        self.s3_prefix = None
+        self._s3_bucket = s3_bucket
+        self._s3_prefix = s3_prefix
 
         # Output File(s) name
-        self.csv_file_name = None
+        self._csv_file_name = csv_file_name
 
         # Check for parameters
-        self.parameters_set = False
+        self._parameters_set = False
 
-        # list for output file(s)
-        self.csv_files_list = []
+        # List for output file(s)
+        self._csv_files_list = []
 
-    def setSnowflakeConnection(self):
 
+    def set_snowflake_connection(self, snowflake_secret_name):
         try:
             client = boto3.client('secretsmanager')
-            snowflake_credentials = client.get_secret_value(SecretId='chalice-dev-config-snowflake-credentials') # Hardcoded Secret name
+            snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
             snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
 
-            self.sf_conn = snowflake.connector.connect(
+            self._sf_conn = snowflake.connector.connect(
                 user = snowflake_credentials['dbUser'],
                 account = snowflake_credentials['dbAccount'],
                 password = snowflake_credentials['dbPassword'],
                 warehouse = 'COMPUTE_WH'
             )
 
-            self.sf_cur = self.sf_conn.cursor()
+            self._sf_cur = self._sf_conn.cursor()
             print('Sucessfully connected to snowflake')
 
         except Exception as err:
             print(err)
 
-        
 
-
-    def isParametersSet(self):
-        if(self.parameters_set == True):
+    def _is_parameters_set(self):
+        if(self._parameters_set == True):
             return True
 
         is_parameters_set = True
         for param, value in self.__dict__.items():
             if(value == None):
-               print(f"Please set the '{param}' attribute before running this function")
-               is_parameters_set = False
+                print(f"Please set the '{param}' attribute before running this function")
+                print('Please run the set_params funtion to set this parameter')
+                is_parameters_set = False
 
-        self.parameters_set = is_parameters_set
+        self._parameters_set = is_parameters_set
         return is_parameters_set
         
-    def runUserScoring(self):
+
+    def set_params(self, train_table_name=None, train_table_attributes=None, 
+                   prediction_table_name=None, prediction_table_attributes=None,
+                   null_threshold=0.5, bootstrap_type='MVS', depth=6,
+                   loss_function='RMSE', iteration=1000, test_proportion=0.3,
+                   learning_rate=0.05, s3_bucket=None, s3_prefix=None, 
+                   csv_file_name=None):
+        
+        if train_table_name != None:
+            self._train_table_name = train_table_name
+        
+        if train_table_attributes != None:
+            self._train_table_attributes = train_table_attributes
+        
+        if prediction_table_name != None:
+            self._prediction_table_name = prediction_table_name
+        
+        if prediction_table_attributes != None:
+            self._prediction_table_attributes = prediction_table_attributes
+
+        if null_threshold != 0.5:
+            self._null_threshold = null_threshold
+        
+        if bootstrap_type != 'MVS':
+            self._bootstrap_type = bootstrap_type
+
+        if depth != 6:
+            self._depth = depth
+
+        if loss_function != 'RSME':
+            self._loss_function = loss_function
+
+        if iteration != 1000:
+            self._iteration = iteration
+
+        if test_proportion != 0.3:
+            self._test_proportion = test_proportion
+
+        if learning_rate != 0.05:
+            self._learning_rate = learning_rate
+
+        if s3_bucket != None:
+            self._s3_bucket = s3_bucket
+        
+        if s3_prefix != None:
+            self._s3_prefix = s3_prefix
+
+        if csv_file_name != None:
+            self._csv_file_name = csv_file_name
+       
+       
+    def run_user_scoring(self):
         from ChaliceUserScoring.Utils.run_ltv_pred import data_prep, train_model, model_prediction
         
-        if not self.isParametersSet():
+        if not self._is_parameters_set():
             return
        
-        df, X, Y = data_prep(self.sf_cur, self.train_table_name, 
-                             self.train_table_attributes, self.null_threshold)
-        
-        clf, categorical_feature_indicies = train_model(X, Y, self.test_proportion,
-                                                        self.bootstrap_type, self.depth, 
-                                                        self.learning_rate, self.loss_function,
-                                                        self.iteration)
+        df, X, Y = data_prep(self._sf_cur, self._train_table_name, 
+                             self._train_table_attributes, self._null_threshold)
 
-        csv_files = model_prediction(self.prediction_table_name, self.prediction_table_attributes, 
-                                     clf, X, self.s3_bucket, self.s3_prefix, self.csv_file_name, self.sf_cur)
+        clf, categorical_feature_indicies = train_model(X, Y, self._test_proportion,
+                                                        self._bootstrap_type, self._depth, 
+                                                        self._learning_rate, self._loss_function,
+                                                        self._iteration)
 
-        self.csv_files_list = csv_files
+        csv_files = model_prediction(self._prediction_table_name, self._prediction_table_attributes, 
+                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, self._sf_cur)
+
+        self._csv_files_list = csv_files
 
         #csv files [(csv, filename), (csv, filename) ....]
         for file in csv_files: 
-            print(f"{file[1]} was created and pushed to s3 Bucket: {self.s3_bucket}")
+            print(f"{file[1]} was created and pushed to s3 Bucket: {self._s3_bucket}")
     
   
     def push_to_TTD(self, user, advertiser_id, segment_name, secret_key):
@@ -113,20 +169,21 @@ class UserScoring:
         failed_files = 0
         t1 = time.time()
         results = []
-        num_files = len(self.csv_files_list)
-        for i, csv in enumerate(self.csv_files_list):
+        num_files = len(self._csv_files_list)
+        for i, csv in enumerate(self._csv_files_list):
             print(f'Uploading chunk {i + 1}/{num_files}')
-            print(csv[1].format(i + 1))
+            print(csv[1])
+            csv[0].to_csv(path_or_buf=csv[1], index=False)
             try:
                 result = conn.post_data(advertiser_id=advertiser_id,
-                                        scores_csv=csv[0].format(i + 1),
+                                        scores_csv=csv[1],
                                         segment_name=segment_name)
             except UnicodeDecodeError as e:
-                print(f'**FAILED** Unable to read {csv[1].format(i + 1)}. Skipping...')
+                print(f'**FAILED** Unable to read {csv[1]}. Skipping...')
                 failed_files += 1
                 continue
             except Exception as e:
-                print(f'**FAILED** Upload of {csv[1].format(i + 1)} failed due to {type(e)}. Skipping...')
+                print(f'**FAILED** Upload of {csv[1]} failed due to {type(e)}. Skipping...')
                 failed_files += 1
                 raise e
             results.append(result)

@@ -50,33 +50,6 @@ def log_transform(dataframe):
     Y = dataframe['logltv']
     return X, Y
 
-"""
-NEEDS:
-    prediction table name
-    predictino table attribute list
-"""
-def prediction_data(snowflake_table_pred, table_attributes, offset=0): 
-    ctx = snowflake.connector.connect(
-      user='TYLYNN',
-      account='mja29153.us-east-1',
-      password = 'Brenn1025!',
-      warehouse='TABLEAU_L',
-      database='CLIENT',
-      schema='PROGRESSIVE'
-      )
-    cur = ctx.cursor()
-    attrbutes = table_attributes.join(',')
-    # offset_statement = f'OFFSET {offset} ROWS FETCH NEXT 100000 ROWS ONLY'
-    # sql = f"SELECT {attrbutes} FROM {snowflake_table_pred} {offset_statement}"
-    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred}"
-    # look into fetch pandas batches
-    cur.execute(sql)
-    df_piq = cur.fetch_pandas_all()
-
-    cur.close()
-    ctx.close()
-    
-    return df_piq
 
 #looks good
 def catboost_prediction(df_piq, clf, X):

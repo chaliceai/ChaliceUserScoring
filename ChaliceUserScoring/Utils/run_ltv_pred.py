@@ -52,36 +52,7 @@ def train_model(X, Y, test_proportion, bootstrap_type,
                                                             loss_function=loss_function, iteration=iteration)
     return clf, categorical_features_indices
 
-"""
-NEEDS:
-    Table Name   type: string
-    Attributes to select    type: list of strings
-    clf from train_model type: ??
-    X from data_prep
 
-DOES:
-    runs model prediction
-"""
-# def model_prediction(snowflake_table_pred_name, pred_table_attributes, clf, X):
-#     df_piq = prediction_data(snowflake_table_pred_name, pred_table_attributes)
-#     df_piq = catboost_prediction(df_piq, clf, X)
-#     return df_piq
-
-
-"""
-NEEDS:
-    csv file name   type: string
-    bucket name type: string
-    prefix  type: string
-
-Does:
-    formats csv
-    pushes csv to s3
-"""
-def format_results(csv_name, bucket, prefix):
-    daids = daid_format(csv_name = csv_name)
-    push_to_s3(csv_name=csv_name, bucket=bucket, prefix=prefix)
-    return daids
 
     
     
