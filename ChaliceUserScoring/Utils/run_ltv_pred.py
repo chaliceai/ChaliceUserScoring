@@ -66,8 +66,12 @@ def model_prediction(snowflake_table_pred_name, table_attributes, clf, X,
     for i, df in enumerate(cur.fetch_pandas_batches()):
         df = catboost_prediction(df, clf, X)
         df = daid_format_pandas(df)
-        csv_name = csv_name.removesuffix('.csv')
-        df = pandas_push_to_s3(df, bucket, prefix, f"{csv_name}_{i + 1}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv")
-        list_of_csvs.append(df)
+
+        # Checkins if ending with .csv and removes it
+        if csv_name[-4:] == '.csv':
+            csv_name = csv_name[:-4]
+
+        new_csv_name = pandas_push_to_s3(df, bucket, prefix, f"{csv_name}_{i + 1}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv")
+        list_of_csvs.append(new_csv_name)
 
     return list_of_csvs

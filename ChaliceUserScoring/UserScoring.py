@@ -2,12 +2,29 @@ import snowflake.connector
 import boto3
 import json
 
+
+def set_snowflake_connection(snowflake_secret_name):
+    try:
+        client = boto3.client('secretsmanager')
+        snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
+        snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
+
+        sf_conn = snowflake.connector.connect(
+            user = snowflake_credentials['dbUser'],
+            account = snowflake_credentials['dbAccount'],
+            password = snowflake_credentials['dbPassword'],
+            warehouse = 'COMPUTE_WH'
+        )
+
+        sf_cur = sf_conn.cursor()
+
+        return sf_conn, sf_cur
+
+    except Exception as err:
+        print(err)
+
+
 class UserScoring:
-
-
-    def __del__(self):
-        self._sf_conn.close()
-        self._sf_cur.close()
 
     
     def __init__(self, train_table_name=None, train_table_attributes=None, 
@@ -46,26 +63,6 @@ class UserScoring:
 
         # List for output file(s)
         self._csv_files_list = []
-
-
-    def set_snowflake_connection(self, snowflake_secret_name):
-        try:
-            client = boto3.client('secretsmanager')
-            snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
-            snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
-
-            self._sf_conn = snowflake.connector.connect(
-                user = snowflake_credentials['dbUser'],
-                account = snowflake_credentials['dbAccount'],
-                password = snowflake_credentials['dbPassword'],
-                warehouse = 'COMPUTE_WH'
-            )
-
-            self._sf_cur = self._sf_conn.cursor()
-            print('Sucessfully connected to snowflake')
-
-        except Exception as err:
-            print(err)
 
 
     def _is_parameters_set(self):
@@ -132,14 +129,16 @@ class UserScoring:
         if csv_file_name != None:
             self._csv_file_name = csv_file_name
        
-       
-    def run_user_scoring(self):
+    
+    def run_user_scoring(self, snowflake_secret_name):
         from ChaliceUserScoring.Utils.run_ltv_pred import data_prep, train_model, model_prediction
         
         if not self._is_parameters_set():
             return
-       
-        df, X, Y = data_prep(self._sf_cur, self._train_table_name, 
+
+        sf_conn, sf_cur = set_snowflake_connection(snowflake_secret_name)
+
+        df, X, Y = data_prep(sf_cur, self._train_table_name, 
                              self._train_table_attributes, self._null_threshold)
 
         clf, categorical_feature_indicies = train_model(X, Y, self._test_proportion,
@@ -148,21 +147,26 @@ class UserScoring:
                                                         self._iteration)
 
         csv_files = model_prediction(self._prediction_table_name, self._prediction_table_attributes, 
-                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, self._sf_cur)
+                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, sf_cur)
+
+        # Closing snowflake connection
+        sf_conn.close()
+        sf_cur.close()
 
         self._csv_files_list = csv_files
 
         #csv files [(csv, filename), (csv, filename) ....]
         for file in csv_files: 
-            print(f"{file[1]} was created and pushed to s3 Bucket: {self._s3_bucket}")
+            print(f"{file} was created and pushed to s3 Bucket: {self._s3_bucket}")
     
-  
-    def push_to_TTD(self, user, advertiser_id, segment_name, secret_key):
+    # TODO get each csv in s3 then push that. Only loading in one at a time.
+    # This is to avoid having all of them in memory
+    def push_to_TTD(self, ttd_user, advertiser_id, segment_name, secret_key):
         from ChaliceAPIUsage.APIConnection import TradedeskAPIConnection
         import time
         import datetime as dt
 
-        conn = TradedeskAPIConnection(user)
+        conn = TradedeskAPIConnection(ttd_user)
         conn.set_secret(advertiser_id=advertiser_id,
                         secret_key=secret_key)
 
@@ -170,20 +174,21 @@ class UserScoring:
         t1 = time.time()
         results = []
         num_files = len(self._csv_files_list)
-        for i, csv in enumerate(self._csv_files_list):
+        s3 = boto3.client('s3') 
+        for i, csv_file_name in enumerate(self._csv_files_list):
             print(f'Uploading chunk {i + 1}/{num_files}')
-            print(csv[1])
-            csv[0].to_csv(path_or_buf=csv[1], index=False)
+           
+            csv = f's3://{self._s3_bucket}/{self._s3_prefix}/{csv_file_name}'
             try:
                 result = conn.post_data(advertiser_id=advertiser_id,
-                                        scores_csv=csv[1],
+                                        scores_csv=csv,
                                         segment_name=segment_name)
             except UnicodeDecodeError as e:
-                print(f'**FAILED** Unable to read {csv[1]}. Skipping...')
+                print(f'**FAILED** Unable to read {csv_file_name}. Skipping...')
                 failed_files += 1
                 continue
             except Exception as e:
-                print(f'**FAILED** Upload of {csv[1]} failed due to {type(e)}. Skipping...')
+                print(f'**FAILED** Upload of {csv_file_name} failed due to {type(e)}. Skipping...')
                 failed_files += 1
                 raise e
             results.append(result)
@@ -193,3 +198,6 @@ class UserScoring:
         print('Total Lines with Errors:', sum([x['FailedIDs'] for x in results]))
         print(f'Number of files skipped due to error: {failed_files}')
 
+# Dag takes s_3 prefixes, bucket, advertiser Id, secret. uploads usr codes using push_to_TTD
+# Task 1 - get s3 Files 
+# Task 2 - pushing to TTD using post data
