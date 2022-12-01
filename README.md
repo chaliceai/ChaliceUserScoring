@@ -79,6 +79,7 @@ my_user_scoring = UserScoring(train_table_name='TABLE_NAME', train_table_attribu
  my_user_scoring = UserScoring()
  ```
  
+[Back to Table of Contents](#table-of-contents)
 
 ### set_params()
 
@@ -114,6 +115,7 @@ my_user_scoring = UserScoring()
 
 my_user_scoring.set_params(prediction_table_name='TABLE_NAME', depth=10, csv_file_name='FILE_NAME')
 ```
+[Back to Table of Contents](#table-of-contents)
 
 ### get_user_scoring()
 ```py
@@ -130,6 +132,8 @@ my_user_scoring = UserScoring()
 
 my_user_scoring.get_user_scoring()
 ```
+
+[Back to Table of Contents](#table-of-contents)
 
 ### push_to_TTD()
 ```py
@@ -148,5 +152,5 @@ my_user_scoring = UserScoring()
 
 my_user_scoring.push_to_TTD('TTD_USER', 'ADVERTISER_ID', 'SEGMENT_NAME', 'SECRET_KEY')
 ```
-
+[Back to Table of Contents](#table-of-contents)
 
