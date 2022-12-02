@@ -40,7 +40,7 @@ def test():
 
    
   
-    my_user_scoring.run_user_scoring(snowflake_secret_name)
+   #my_user_scoring.run_user_scoring(snowflake_secret_name)
 
     my_user_scoring.push_to_TTD(ttd_user, ADVERTISER_ID, "TEST_UserScoring11/30/22", secret_key)
 

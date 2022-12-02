@@ -21,7 +21,7 @@ def pandas_push_to_s3(df, bucket, prefix, file_name):
     s3_res = boto3.resource('s3')
     csv_buffer = StringIO()
     prefix = f"{prefix}/{file_name}"
-    df.to_csv(csv_buffer)
+    df.to_csv(csv_buffer, index=False)
     s3_res.Object(bucket, prefix).put(Body=csv_buffer.getvalue())
     csv_buffer.close()
     del df
