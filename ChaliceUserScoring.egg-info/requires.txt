@@ -3,7 +3,7 @@ numpy
 shap
 seaborn
 catboost
-snowflake-connector-python
+snowflake-connector-python[pandas]
 scikit-learn
 imbalanced-learn
 boto3
