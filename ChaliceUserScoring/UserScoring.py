@@ -11,11 +11,9 @@ def post_data(advertiser_id, scores_csv, segment_name, secret_key, **kwargs):
     print("Using process pool execution for POST... ")
     payload_list = generate_user_score_payloads(file=scores_csv, segment_name=segment_name,
                                  advertiser_id=advertiser_id, datakey=datakey, **kwargs)
-
-    p = mp.Pool(processes=20)
     total = 0
     failed = 0
-    
+    p = mp.Pool(processes=20)
     for num_total, num_failed in p.imap(handle_payload, payload_list):
         total += num_total
         failed += num_failed
@@ -43,8 +41,11 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
 
     idx = 0
     header_cols = get_csv_header(file)
-    indices = get_header_indices([timeToLiveCol, valueCol, idCol, idTypeCol], header_cols)
 
+    # for ln in csv_read(file):
+    #     print(ln)
+
+    indices = get_header_indices([timeToLiveCol, valueCol, idCol, idTypeCol], header_cols)
     for ln in csv_read(file):
         idx += 1
         if idx == max_lines:
@@ -64,8 +65,10 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
 
 
 def get_csv_header(file):
-    encoding = 'utf-8'
-    # if file.readline()[0] == '\ufeff':
+    encoding = 'utf-8-sig'
+    # encoding = 'utf-8'
+    # f = file.readline()
+    # if f[0] == '\ufeff':
     #     encoding = 'utf-8-sig'
     # dialect = csv.Sniffer().sniff(file.read(1024).decode(encoding))
 
@@ -76,7 +79,8 @@ def get_csv_header(file):
 
 
 def csv_read(file):
-    encoding = 'utf-8'
+    encoding = 'utf-8-sig'
+    # encoding = 'utf-8'
     # if file.readline()[0] == '\ufeff':
     #     encoding = 'utf-8-sig'
     # dialect = csv.Sniffer().sniff(file.read(1024).decode(encoding))
@@ -255,16 +259,17 @@ class UserScoring:
         results = []
         num_files = len(self._csv_files_list)
         s3 = boto3.client('s3') 
+
+
+        # test_files = ['utf_encoding_test_3.csv', 'utf_encoding_test_2.csv', 'TEST-python-module-User-Scoring_1_2022-12-02.csv']
         for i, csv_file_name in enumerate(self._csv_files_list):
+        # for i, csv_file_name in enumerate(test_files):
             print(f'Uploading chunk {i + 1}/{num_files}')
            
             obj = s3.get_object(Bucket= self._s3_bucket, Key= f'{self._s3_prefix}/{csv_file_name}') 
             data = obj['Body']
 
             try:
-                # result = conn.post_data(advertiser_id=advertiser_id,
-                #                         scores_csv=f's3://{self._s3_bucket}/{self._s3_prefix}/{csv_file_name}',
-                #                         segment_name="TEST_userscoring_python_module12/2")
                 result = post_data(advertiser_id=advertiser_id,
                                     scores_csv=data,
                                     segment_name=segment_name,

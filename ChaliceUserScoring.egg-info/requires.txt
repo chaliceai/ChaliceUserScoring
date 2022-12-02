@@ -1,0 +1,9 @@
+pandas
+numpy
+shap
+seaborn
+catboost
+snowflake-connector-python
+scikit-learn
+imbalanced-learn
+boto3
