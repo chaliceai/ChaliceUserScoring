@@ -23,6 +23,10 @@ Use the following command to install the package using `pip`
 ```
  pip install git+https://github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
 ```
+or using SSH
+```
+pip install --no-input git+ssh://git@github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
+```
 
 This will install the `Chalice User Scoring` package into your python environment. Use of a
 virtual environment is recommended.
