@@ -274,6 +274,7 @@ class UserScoring:
                                     scores_csv=data,
                                     segment_name=segment_name,
                                     secret_key=secret_key)
+                data.close()    
             except UnicodeDecodeError as e:
                 print(f'**FAILED** Unable to read {csv_file_name}. Skipping...')
                 failed_files += 1
