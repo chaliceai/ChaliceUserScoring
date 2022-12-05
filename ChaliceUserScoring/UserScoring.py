@@ -42,9 +42,6 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
     idx = 0
     header_cols = get_csv_header_stream(file)
 
-    # for ln in csv_read(file):
-    #     print(ln)
-
     indices = get_header_indices([timeToLiveCol, valueCol, idCol, idTypeCol], header_cols)
     for ln in csv_read_stream(file):
         idx += 1
@@ -65,26 +62,19 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
 
 
 def get_csv_header_stream(file):
-    encoding = 'utf-8-sig'
-    # encoding = 'utf-8'
-    # f = file.readline()
-    # if f[0] == '\ufeff':
-    #     encoding = 'utf-8-sig'
-    # dialect = csv.Sniffer().sniff(file.read(1024).decode(encoding))
-
-    f = file.readline().decode(encoding).splitlines()
+    encoding = 'utf-8'
+    f = file.readline().decode(encoding)
+    if f[0] == '\ufeff':
+        f = f.lstrip('\ufeff')
+    
+    f = f.splitlines()
     reader = csv.reader(f)
     for ln in reader:
         return ln
 
 
 def csv_read_stream(file):
-    encoding = 'utf-8-sig'
-    # encoding = 'utf-8'
-    # if file.readline()[0] == '\ufeff':
-    #     encoding = 'utf-8-sig'
-    # dialect = csv.Sniffer().sniff(file.read(1024).decode(encoding))
-
+    encoding = 'utf-8'
     f = file.read().decode(encoding).splitlines()
     reader = csv.reader(f)
     for ln in reader:
@@ -257,7 +247,6 @@ class UserScoring:
         if (self._s3_bucket == None) or (self._s3_prefix == None):
             print('Please run setParams() and set the s3_bucket or s3_prefix variable')
             return
-
 
         failed_files = 0
         t1 = time.time()

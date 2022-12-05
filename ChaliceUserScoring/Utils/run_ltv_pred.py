@@ -60,7 +60,7 @@ def model_prediction(snowflake_table_pred_name, table_attributes, clf, X,
                      bucket, prefix, csv_name, cur):
     attrbutes = ', '.join(table_attributes)
    
-    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name} LIMIT 1000" #ADDED LIMIT FOR TESTING
+    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name} LIMIT 100000" #ADDED LIMIT FOR TESTING
     cur.execute(sql)
     list_of_csvs = []
     for i, df in enumerate(cur.fetch_pandas_batches()):

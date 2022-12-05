@@ -6,7 +6,7 @@
 3. [How to Use](#how-to-use)
     - [constructor](#constructor)
     - [set_params()](#set_params)
-    - [get_user_scoring()](#get_user_scoring)
+    - [run_user_scoring()](#run_user_scoring)
     - [push_to_TTD()](#push_to_ttd)
 
 
@@ -117,7 +117,7 @@ my_user_scoring.set_params(prediction_table_name='TABLE_NAME', depth=10, csv_fil
 ```
 [Back to Table of Contents](#table-of-contents)
 
-### get_user_scoring()
+### run_user_scoring()
 ```py
   UserScoring.run_user_scoring(snowflake_secret_name):
  ```
@@ -133,7 +133,7 @@ Example:
 ```py
 my_user_scoring = UserScoring()
 
-csv_files = my_user_scoring.get_user_scoring()
+csv_files = my_user_scoring.run_user_scoring()
 ```
 
 [Back to Table of Contents](#table-of-contents)
@@ -152,8 +152,13 @@ UserScoring.push_to_TTD(ttd_user, advertiser_id, segment_name, secret_key):
 Example:
 ```py
 my_user_scoring = UserScoring()
-
-my_user_scoring.push_to_TTD('TTD_USER', 'ADVERTISER_ID', 'SEGMENT_NAME', 'SECRET_KEY')
+csv_files_list = my_user_scoring.run_user_scoring()
+my_user_scoring.push_to_TTD(csv_files_list, 'ADVERTISER_ID', 'SEGMENT_NAME', 'SECRET_KEY')
+```
+or
+```py
+csv_files_list = ['csv_file_name1.csv' ,'csv_file_name2.csv]
+my_user_scoring.push_to_TTD(csv_files_list, 'ADVERTISER_ID', 'SEGMENT_NAME', 'SECRET_KEY')
 ```
 [Back to Table of Contents](#table-of-contents)
 
