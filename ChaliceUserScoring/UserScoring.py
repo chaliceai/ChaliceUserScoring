@@ -40,13 +40,13 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
     payloads = []
 
     idx = 0
-    header_cols = get_csv_header(file)
+    header_cols = get_csv_header_stream(file)
 
     # for ln in csv_read(file):
     #     print(ln)
 
     indices = get_header_indices([timeToLiveCol, valueCol, idCol, idTypeCol], header_cols)
-    for ln in csv_read(file):
+    for ln in csv_read_stream(file):
         idx += 1
         if idx == max_lines:
             idx = 0
@@ -64,7 +64,7 @@ def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **k
     return payloads
 
 
-def get_csv_header(file):
+def get_csv_header_stream(file):
     encoding = 'utf-8-sig'
     # encoding = 'utf-8'
     # f = file.readline()
@@ -78,7 +78,7 @@ def get_csv_header(file):
         return ln
 
 
-def csv_read(file):
+def csv_read_stream(file):
     encoding = 'utf-8-sig'
     # encoding = 'utf-8'
     # if file.readline()[0] == '\ufeff':
@@ -243,27 +243,30 @@ class UserScoring:
 
         self._csv_files_list = csv_files
 
-        #csv files [(csv, filename), (csv, filename) ....]
         for file in csv_files: 
             print(f"{file} was created and pushed to s3 Bucket: {self._s3_bucket}")
+        
+        return csv_files
     
     # TODO get each csv in s3 then push that. Only loading in one at a time.
     # This is to avoid having all of them in memory
-    def push_to_TTD(self, ttd_user, advertiser_id, segment_name, secret_key):
+    def push_to_TTD(self, csv_files_list, advertiser_id, segment_name, secret_key):
         import time
         import datetime as dt
+
+        if (self._s3_bucket == None) or (self._s3_prefix == None):
+            print('Please run setParams() and set the s3_bucket or s3_prefix variable')
+            return
 
 
         failed_files = 0
         t1 = time.time()
         results = []
-        num_files = len(self._csv_files_list)
+        num_files = len(csv_files_list)
         s3 = boto3.client('s3') 
 
 
-        # test_files = ['utf_encoding_test_3.csv', 'utf_encoding_test_2.csv', 'TEST-python-module-User-Scoring_1_2022-12-02.csv']
-        for i, csv_file_name in enumerate(self._csv_files_list):
-        # for i, csv_file_name in enumerate(test_files):
+        for i, csv_file_name in enumerate(csv_files_list):
             print(f'Uploading chunk {i + 1}/{num_files}')
            
             obj = s3.get_object(Bucket= self._s3_bucket, Key= f'{self._s3_prefix}/{csv_file_name}') 
@@ -289,7 +292,3 @@ class UserScoring:
         print('Total IDs Submitted:', sum([x["TotalIDs"] for x in results]))
         print('Total Lines with Errors:', sum([x['FailedIDs'] for x in results]))
         print(f'Number of files skipped due to error: {failed_files}')
-
-# Dag takes s_3 prefixes, bucket, advertiser Id, secret. uploads usr codes using push_to_TTD
-# Task 1 - get s3 Files 
-# Task 2 - pushing to TTD using post data

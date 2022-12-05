@@ -38,9 +38,11 @@ def test():
 
     my_user_scoring = UserScoring(**params)
   
-    my_user_scoring.run_user_scoring(snowflake_secret_name)
+    # my_user_scoring.run_user_scoring(snowflake_secret_name)
 
-    my_user_scoring.push_to_TTD(ttd_user, ADVERTISER_ID, "TEST_UserScoring11/30/22", secret_key)
+    # test_files = ['utf_encoding_test_3.csv', 'utf_encoding_test_2.csv', 'TEST-python-module-User-Scoring_1_2022-12-02.csv']
+    test_files = ['TEST-python-module-User-Scoring_1_2022-12-02.csv', 'TEST-python-module-User-Scoring_2_2022-12-02.csv']
+    my_user_scoring.push_to_TTD(test_files, ADVERTISER_ID, "TEST_UserScoring11/30/22", secret_key)
 
 if __name__ == '__main__':
     test()

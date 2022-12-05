@@ -21,7 +21,7 @@ have permissions from Chalice AI to access the repo.
 Use the following command to install the package using `pip`
 
 ```
- pip install git@something
+ pip install git+https://github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
 ```
 
 This will install the `Chalice User Scoring` package into your python environment. Use of a
@@ -126,11 +126,14 @@ my_user_scoring.set_params(prediction_table_name='TABLE_NAME', depth=10, csv_fil
 | -------------             |:-------------:    | :-----:|
 | snowflake_secret_name     | `string`          | *None* |
 
+Returns:
+`List of Strings` containing csv file names pushed to s3
+
 Example:
 ```py
 my_user_scoring = UserScoring()
 
-my_user_scoring.get_user_scoring()
+csv_files = my_user_scoring.get_user_scoring()
 ```
 
 [Back to Table of Contents](#table-of-contents)

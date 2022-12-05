@@ -7,5 +7,5 @@ snowflake-connector-python[pandas]
 scikit-learn
 imbalanced-learn
 boto3
-ChaliceAPIUsage@ git+https://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@github.com/chaliceai/ChaliceAPIUsage.git@master#egg=ChaliceAPIUsage
+ChaliceAPIUsage@ git+https://github.com/chaliceai/ChaliceAPIUsage.git@master#egg=ChaliceAPIUsage
 IPython
