@@ -8,4 +8,4 @@ scikit-learn
 imbalanced-learn
 boto3
 IPython
-ChaliceAPIUsage@ git+https://github.com/chaliceai/ChaliceAPIUsage.git@master
+ChaliceAPIUsage@ git+ssh://git@github.com/chaliceai/ChaliceAPIUsage.git@master

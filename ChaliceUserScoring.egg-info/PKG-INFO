@@ -33,7 +33,14 @@ This getting started assumes you have the aws cli installed with the credentials
 have permissions from Chalice AI to access the repo.
 
 Use the following command to install the package using `pip`
+Temporary 2 step process:
 
+First install Chalice API Usage using:
+```
+!pip install git+https://<Personal Access Token>@github.com/chaliceai/ChaliceAPIUsage.git@master
+```
+
+Then install Chalice User Scoring
 ```
  pip install git+https://<Personal Access Token>@github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
 ```
