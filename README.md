@@ -21,7 +21,7 @@ have permissions from Chalice AI to access the repo.
 Use the following command to install the package using `pip`
 
 ```
- pip install git+https://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@github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
+ pip install git+https://<Personal Access Token>@github.com/chaliceai/ChaliceUserScoring.git@feature-python-packaging
 ```
 or using SSH
 ```
