@@ -151,11 +151,11 @@ csv_files = my_user_scoring.run_user_scoring()
 
 ### push_to_TTD()
 ```py
-UserScoring.push_to_TTD(ttd_user, advertiser_id, segment_name, secret_key):
+UserScoring.push_to_TTD(csv_file_list, advertiser_id, segment_name, secret_key):
 ```
 | Parameter                 | Type              | Default|
 | -------------             |:-------------:    | :-----:|
-| ttd_user                  | `string`          | *None* |
+| csv_file_list             | `list of strings`          | *None* |
 | advertiser_id             | `string`          | *None* |
 | segment_name              | `string`          | *None* |
 | secret_key                | `string`          | *None* |
@@ -168,7 +168,7 @@ my_user_scoring.push_to_TTD(csv_files_list, 'ADVERTISER_ID', 'SEGMENT_NAME', 'SE
 ```
 or
 ```py
-csv_files_list = ['csv_file_name1.csv' ,'csv_file_name2.csv]
+csv_files_list = ['csv_file_name1.csv' ,'csv_file_name2.csv']
 my_user_scoring.push_to_TTD(csv_files_list, 'ADVERTISER_ID', 'SEGMENT_NAME', 'SECRET_KEY')
 ```
 [Back to Table of Contents](#table-of-contents)
