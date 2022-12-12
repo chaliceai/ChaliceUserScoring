@@ -91,7 +91,7 @@ def set_snowflake_connection(snowflake_secret_name):
             user = snowflake_credentials['dbUser'],
             account = snowflake_credentials['dbAccount'],
             password = snowflake_credentials['dbPassword'],
-            warehouse = 'COMPUTE_WH'
+            warehouse = 'DEV_WH'
         )
 
         sf_cur = sf_conn.cursor()
