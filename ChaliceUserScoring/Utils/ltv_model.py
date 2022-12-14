@@ -28,7 +28,8 @@ def training_data(cur, snowflake_table_train, table_attributes,sample_size=None)
 #looks good
 def fix_nulls_and_types(dataframe, null_threshold, nulls = 'Yes', types = 'Yes', val = 0):
     if nulls == "Yes":
-        dataframe = dataframe.loc[:, dataframe.isnull().sum() < null_threshold * dataframe.shape[0]]
+        # Commented out for smaller dataset size testing
+        # dataframe = dataframe.loc[:, dataframe.isnull().sum() < null_threshold * dataframe.shape[0]]
         dataframe = dataframe.fillna(value = val)
     if types == 'Yes':
         for col in dataframe.columns:

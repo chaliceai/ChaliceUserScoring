@@ -38,7 +38,7 @@ def test():
 
     my_user_scoring = UserScoring(**params)
   
-    # my_user_scoring.run_user_scoring(snowflake_secret_name)
+    my_user_scoring.run_user_scoring(snowflake_secret_name)
 
     #test_files = ['testcsv.csv', 'utf_encoding_test_2.csv', 'TEST-python-module-User-Scoring_1_2022-12-02.csv']
     test_files = ['TEST-python-module-User-Scoring_1_2022-12-09.csv', 
@@ -69,7 +69,7 @@ def test():
                   'TEST-python-module-User-Scoring_26_2022-12-09.csv',
                   'TEST-python-module-User-Scoring_27_2022-12-09.csv',
                   'TEST-python-module-User-Scoring_28_2022-12-09.csv']
-    my_user_scoring.push_to_TTD(test_files, ADVERTISER_ID, "TEST_user_scoring_AIRFLOW", secret_key)
+   # my_user_scoring.push_to_TTD(test_files, ADVERTISER_ID, "TEST_user_scoring_AIRFLOW", secret_key)
 
 if __name__ == '__main__':
     test()

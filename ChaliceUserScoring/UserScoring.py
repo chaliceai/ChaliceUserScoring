@@ -2,11 +2,10 @@ import snowflake.connector
 import boto3
 import json
 import multiprocessing as mp
-from ChaliceAPIUsage.APIConnection import handle_payload
-from ChaliceAPIUsage.Utils.BidListGenerator import get_header_indices
 import csv
 
 def post_data(advertiser_id, scores_csv, segment_name, secret_key, **kwargs):
+    from ChaliceAPIUsage.APIConnection import handle_payload
     datakey = bytes(secret_key, 'utf-8')
     print("Using process pool execution for POST... ")
     payload_list = generate_user_score_payloads(file=scores_csv, segment_name=segment_name,
@@ -23,6 +22,7 @@ def post_data(advertiser_id, scores_csv, segment_name, secret_key, **kwargs):
 
 
 def generate_user_score_payloads(file, segment_name, advertiser_id, datakey, **kwargs):
+    from ChaliceAPIUsage.Utils.BidListGenerator import get_header_indices
     if not kwargs.get('timeToLiveCol'):
         timeToLiveCol = 'time_to_live'
     if not kwargs.get('valueCol'):
@@ -210,27 +210,131 @@ class UserScoring:
     
     def run_user_scoring(self, snowflake_secret_name):
         from ChaliceUserScoring.Utils.run_ltv_pred import data_prep, train_model, model_prediction
-        
+        from ChaliceUserScoring.Utils.ltv_model import fix_nulls_and_types, log_transform
+        from sklearn.model_selection import train_test_split
+        from catboost import CatBoostRegressor, Pool, sum_models
+        import shap 
+        import numpy as np  
+        import pandas as pd
         if not self._is_parameters_set():
             return
 
         sf_conn, sf_cur = set_snowflake_connection(snowflake_secret_name)
 
-        df, X, Y = data_prep(sf_cur, self._train_table_name, 
-                             self._train_table_attributes, self._null_threshold)
+        attributes = ', '.join(self._train_table_attributes)
+        sql =  f"SELECT {attributes} FROM {self._train_table_name} LIMIT 10000" #LIMIT ADDED FOR TESTING
+        sf_cur.execute(sql)
 
-        clf, categorical_feature_indicies = train_model(X, Y, self._test_proportion,
-                                                        self._bootstrap_type, self._depth, 
-                                                        self._learning_rate, self._loss_function,
-                                                        self._iteration)
+        
 
-        csv_files = model_prediction(self._prediction_table_name, self._prediction_table_attributes, 
-                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, sf_cur)
+        i = 0
+        best_model = []
+        prev_model = []
+        while True:
+            data = sf_cur.fetchmany(2000)
+            print(f'Fetch ammount 2k')
+            if not data:
+                break
+            
+            df = pd.DataFrame(data, columns=self._train_table_attributes, copy=False)
+            print('created data frame')
+            print('length of df', len(df.columns))
+
+            df = fix_nulls_and_types(df, self._null_threshold)
+            print('Fixed Null and types')
+            print('length of df', len(df.columns))
+
+            X, Y = log_transform(df)
+            # print('Log Transform')
+            # print(X.columns)
+            X_train, X_val, Y_train, Y_val = train_test_split(X,Y,test_size=self._test_proportion, random_state=0)
+
+            # print('Length Of X_train', len(X_train.columns))
+            # print('Length of X_val', len(X_val.columns))
+            categorical_features_indices = np.where(X_train.dtypes != np.float)[0]
+        
+
+            clf=CatBoostRegressor(iterations=self._iteration, 
+                              depth=self._depth, 
+                              learning_rate=self._learning_rate,
+                              bagging_temperature = 0.5, 
+                              custom_metric=['RMSE', 'R2'],
+                              bootstrap_type=self._bootstrap_type,
+                              l2_leaf_reg = 10,
+                              loss_function=self._loss_function)
+
+            if i == 0:
+                train_pool = Pool(data=X_train, label=Y_train, cat_features=categorical_features_indices)
+                test_pool = Pool(data=X_val, label=Y_val, cat_features=categorical_features_indices)
+                
+            else:
+                train_pool = Pool(data=X_train, label=Y_train, cat_features=categorical_features_indices, baseline=sum_model.predict(X_train))
+                test_pool = Pool(data=X_val, label=Y_val, cat_features=categorical_features_indices, baseline=sum_model.predict(X_val))
+
+            clf.fit(train_pool,
+                    eval_set=test_pool, plot=False, 
+                    verbose=False)
+
+            if i == 0:
+                sum_model = clf
+            
+            sum_model = sum_models([clf, sum_model])
+
+            print('\n\n')
+            i += 1
+
+
+        print('Last Model Ran ----')
+        print('Best Iteration:')
+        print(clf.get_best_iteration())
+        res = clf.get_best_score()['learn']
+        print(res)
+
+        r2 = res['R2']
+        rmse = res['RMSE']
+        
+        print('Train Metrics:')
+        print('R2:',r2)
+        print('RMSE:',rmse)
+        
+        res2 = clf.get_best_score()['validation']
+        r2_2 = res2['R2']
+        rmse_2 = res2['RMSE']
+        
+        print('Train Metrics:')
+        print('R2:',r2_2)
+        print('RMSE:',rmse_2)
+
+        shap_values = clf.get_feature_importance(Pool(X_val, label=Y_val,cat_features=categorical_features_indices), 
+                                                                         type="ShapValues")
+        expected_value = shap_values[0,-1]
+        shap_values = shap_values[:,:-1]
+
+        shap.initjs()
+        shap.force_plot(expected_value, shap_values[3,:], X_val.iloc[3,:])
+
+        shap.summary_plot(shap_values, X_val)
+        ##Feature importance
+        clf.get_feature_importance(prettified=True)
+
+
+
+
+
+
+
+
+        # csv_files = model_prediction(self._prediction_table_name, self._prediction_table_attributes, 
+        #                            clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, sf_cur)
+
+        
+
+        
 
         # Closing snowflake connection
         sf_conn.close()
         sf_cur.close()
-
+        csv_files = []
         self._csv_files_list = csv_files
 
         for file in csv_files: 
