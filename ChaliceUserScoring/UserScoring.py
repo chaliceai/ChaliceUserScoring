@@ -314,7 +314,7 @@ class UserScoring:
         shap.force_plot(expected_value, shap_values[3,:], X_val.iloc[3,:])
 
         shap.summary_plot(shap_values, X_val)
-        ##Feature importance
+        # Feature importance
         clf.get_feature_importance(prettified=True)
 
 
