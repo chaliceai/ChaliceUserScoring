@@ -89,7 +89,7 @@ def set_snowflake_connection(snowflake_secret_name):
 
         sf_conn = snowflake.connector.connect(
             user = snowflake_credentials['dbUser'],
-            account = snowflake_credentials['dbAccount'],
+            account = 'mja29153.us-east-1',
             password = snowflake_credentials['dbPassword'],
             warehouse = 'DEV_WH'
         )
