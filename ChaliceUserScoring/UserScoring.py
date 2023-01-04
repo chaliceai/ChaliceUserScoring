@@ -1,5 +1,6 @@
 import snowflake.connector
 import boto3
+from botocore.config import Config
 import json
 import multiprocessing as mp
 from ChaliceAPIUsage.APIConnection import handle_payload
@@ -83,7 +84,15 @@ def csv_read_stream(file):
 
 def set_snowflake_connection(snowflake_secret_name):
     try:
-        client = boto3.client('secretsmanager')
+        my_config = Config(
+            region_name = 'us-east-1',
+            signature_version = 'v4',
+            retries = {
+                'max_attempts': 10,
+                'mode': 'standard'
+            }
+        )
+        client = boto3.client('secretsmanager', config=my_config)
         snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
         snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
 
@@ -252,7 +261,16 @@ class UserScoring:
         t1 = time.time()
         results = []
         num_files = len(csv_files_list)
-        s3 = boto3.client('s3') 
+
+        my_config = Config(
+            region_name = 'us-east-1',
+            signature_version = 'v4',
+            retries = {
+                'max_attempts': 10,
+                'mode': 'standard'
+            }
+        )
+        s3 = boto3.client('s3', config=my_config) 
 
 
         for i, csv_file_name in enumerate(csv_files_list):

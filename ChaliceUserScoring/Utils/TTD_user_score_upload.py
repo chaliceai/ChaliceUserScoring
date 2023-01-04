@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from io import StringIO
+from botocore.config import Config
 
 # Formats the dataframe accordingly
 def daid_format_pandas(daids):
@@ -17,8 +18,17 @@ def daid_format_pandas(daids):
 def pandas_push_to_s3(df, bucket, prefix, file_name):
     import boto3
 
+    my_config = Config(
+        region_name = 'us-east-1',
+        signature_version = 'v4',
+        retries = {
+            'max_attempts': 10,
+            'mode': 'standard'
+        }
+    )
+    
     # Creating S3 Resource From the Session.
-    s3_res = boto3.resource('s3')
+    s3_res = boto3.resource('s3', config=my_config)
     csv_buffer = StringIO()
     prefix = f"{prefix}/{file_name}"
     df.to_csv(csv_buffer, index=False)
