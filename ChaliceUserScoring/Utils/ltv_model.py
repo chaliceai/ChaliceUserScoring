@@ -17,7 +17,7 @@ should take in :
 def training_data(cur, snowflake_table_train, table_attributes,sample_size=None): 
 
     attributes = ', '.join(table_attributes)
-    sql = f"SELECT {attributes} FROM {snowflake_table_train} LIMIT 100000" #LIMIT ADDED FOR TESTING
+    sql = f"SELECT {attributes} FROM {snowflake_table_train} SAMPLE(15)" #LIMIT ADDED FOR TESTING
     if(sample_size != None):
         sql = sql + f"sample({sample_size})"
 

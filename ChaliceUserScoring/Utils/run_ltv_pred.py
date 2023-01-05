@@ -57,10 +57,10 @@ def train_model(X, Y, test_proportion, bootstrap_type,
     
     
 def model_prediction(snowflake_table_pred_name, table_attributes, clf, X,
-                     bucket, prefix, csv_name, cur):
+                     bucket, prefix, csv_name, cur, aws_access, aws_secret):
     attrbutes = ', '.join(table_attributes)
    
-    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name} LIMIT 100000" #ADDED LIMIT FOR TESTING
+    sql = f"SELECT {attrbutes} FROM {snowflake_table_pred_name}" 
     cur.execute(sql)
     list_of_csvs = []
     for i, df in enumerate(cur.fetch_pandas_batches()):
@@ -71,7 +71,7 @@ def model_prediction(snowflake_table_pred_name, table_attributes, clf, X,
         if csv_name[-4:] == '.csv':
             csv_name = csv_name[:-4]
 
-        new_csv_name = pandas_push_to_s3(df, bucket, prefix, f"{csv_name}_{i + 1}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv")
+        new_csv_name = pandas_push_to_s3(df, bucket, prefix, f"{csv_name}_{i + 1}_{dt.datetime.utcnow().strftime('%Y-%m-%d')}.csv", aws_access, aws_secret)
         list_of_csvs.append(new_csv_name)
 
     return list_of_csvs

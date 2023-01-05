@@ -15,7 +15,7 @@ def daid_format_pandas(daids):
     return daids
 
 # Pushes the dataframe to an s3 Bucket
-def pandas_push_to_s3(df, bucket, prefix, file_name):
+def pandas_push_to_s3(df, bucket, prefix, file_name, aws_access, aws_secret):
     import boto3
 
     my_config = Config(
@@ -28,11 +28,11 @@ def pandas_push_to_s3(df, bucket, prefix, file_name):
     )
     
     # Creating S3 Resource From the Session.
-    s3_res = boto3.resource('s3', config=my_config)
+    s3_res = boto3.client('s3', aws_access_key_id=aws_access, aws_secret_access_key=aws_secret, config=my_config)
     csv_buffer = StringIO()
     prefix = f"{prefix}/{file_name}"
     df.to_csv(csv_buffer, index=False)
-    s3_res.Object(bucket, prefix).put(Body=csv_buffer.getvalue())
+    s3_res.put_object(Body=csv_buffer.getvalue(), Bucket=bucket, Key=prefix)
     csv_buffer.close()
     del df
     print('File successfully placed in S3 Bucket')

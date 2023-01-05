@@ -82,7 +82,7 @@ def csv_read_stream(file):
         yield ln
 
 
-def set_snowflake_connection(snowflake_secret_name):
+def set_snowflake_connection(snowflake_secret_name, aws_access, aws_secret):
     try:
         my_config = Config(
             region_name = 'us-east-1',
@@ -92,7 +92,7 @@ def set_snowflake_connection(snowflake_secret_name):
                 'mode': 'standard'
             }
         )
-        client = boto3.client('secretsmanager', config=my_config)
+        client = boto3.client('secretsmanager', aws_access_key_id=aws_access, aws_secret_access_key=aws_secret,config=my_config)
         snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
         snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
 
@@ -119,7 +119,7 @@ class UserScoring:
                  null_threshold=0.5, bootstrap_type='MVS', depth=6,
                  loss_function='RMSE', iteration=1000, test_proportion=0.3,
                  learning_rate=0.05, s3_bucket=None, s3_prefix=None, 
-                 csv_file_name=None):
+                 csv_file_name=None, aws_access=None, aws_secret=None):
 
         # Instance Variables
         # Data Location
@@ -151,6 +151,10 @@ class UserScoring:
         # List for output file(s)
         self._csv_files_list = []
 
+        # AWS Access BAD
+        self._aws_access = aws_access
+        self._aws_secret = aws_secret
+
 
     def _is_parameters_set(self):
         if(self._parameters_set == True):
@@ -172,7 +176,7 @@ class UserScoring:
                    null_threshold=0.5, bootstrap_type='MVS', depth=6,
                    loss_function='RMSE', iteration=1000, test_proportion=0.3,
                    learning_rate=0.05, s3_bucket=None, s3_prefix=None, 
-                   csv_file_name=None):
+                   csv_file_name=None, aws_access=None, aws_secret=None):
         
         if train_table_name != None:
             self._train_table_name = train_table_name
@@ -215,6 +219,12 @@ class UserScoring:
 
         if csv_file_name != None:
             self._csv_file_name = csv_file_name
+
+        if aws_access != None:
+            self._aws_access = aws_access
+
+        if aws_secret != None:
+            self._aws_secret = aws_secret
        
     
     def run_user_scoring(self, snowflake_secret_name):
@@ -222,19 +232,25 @@ class UserScoring:
         
         if not self._is_parameters_set():
             return
-
-        sf_conn, sf_cur = set_snowflake_connection(snowflake_secret_name)
-
+        print('Running Temp Databricks Port....')
+        print('Setting up Sf Connection..')
+        sf_conn, sf_cur = set_snowflake_connection(snowflake_secret_name, self._aws_access, self._aws_secret)
+        
+        print('Ingesting Prepping data')
         df, X, Y = data_prep(sf_cur, self._train_table_name, 
                              self._train_table_attributes, self._null_threshold)
 
+        print('Training Model')
         clf, categorical_feature_indicies = train_model(X, Y, self._test_proportion,
                                                         self._bootstrap_type, self._depth, 
                                                         self._learning_rate, self._loss_function,
                                                         self._iteration)
 
+
+        print('Running Model Predictions')
         csv_files = model_prediction(self._prediction_table_name, self._prediction_table_attributes, 
-                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, sf_cur)
+                                     clf, X, self._s3_bucket, self._s3_prefix, self._csv_file_name, sf_cur,
+                                     self._aws_access, self._aws_secret)
 
         # Closing snowflake connection
         sf_conn.close()
@@ -270,9 +286,8 @@ class UserScoring:
                 'mode': 'standard'
             }
         )
-        s3 = boto3.client('s3', config=my_config) 
-
-
+        s3 = boto3.client('s3', aws_access_key_id=self._aws_access, aws_secret_access_key=self._aws_secret,config=my_config) 
+        print(f'{num_files} Files found starting to upload..')
         for i, csv_file_name in enumerate(csv_files_list):
             print(f'Uploading chunk {i + 1}/{num_files}')
            

@@ -25,7 +25,11 @@ def test():
         'csv_file_name': 'TEST-python-module-User-Scoring.csv',
 
         's3_bucket': 'chaliceai-sandbox',
-        's3_prefix': 'HenryOnboarding/ChaliceUserScoringTEST'
+        's3_prefix': 'HenryOnboarding/DatabricksTest',
+        
+        # AWS secrets
+        'aws_access': 'AKIA2XH7LDGPOVEIQWUT',
+        'aws_secret': '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',
     }
 
     # Secrets/other
@@ -38,38 +42,9 @@ def test():
 
     my_user_scoring = UserScoring(**params)
   
-    # my_user_scoring.run_user_scoring(snowflake_secret_name)
+    csv_list = my_user_scoring.run_user_scoring(snowflake_secret_name)
 
-    #test_files = ['testcsv.csv', 'utf_encoding_test_2.csv', 'TEST-python-module-User-Scoring_1_2022-12-02.csv']
-    test_files = ['TEST-python-module-User-Scoring_1_2022-12-09.csv', 
-                  'TEST-python-module-User-Scoring_2_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_3_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_4_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_5_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_6_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_7_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_8_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_9_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_10_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_11_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_12_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_13_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_14_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_15_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_16_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_17_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_18_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_19_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_20_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_21_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_22_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_23_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_24_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_25_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_26_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_27_2022-12-09.csv',
-                  'TEST-python-module-User-Scoring_28_2022-12-09.csv']
-    my_user_scoring.push_to_TTD(test_files, ADVERTISER_ID, "TEST_user_scoring_AIRFLOW", secret_key)
+    my_user_scoring.push_to_TTD(csv_list, 'sds', 'sds', 'sdd')
 
 if __name__ == '__main__':
     test()
