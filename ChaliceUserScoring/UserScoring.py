@@ -232,7 +232,7 @@ class UserScoring:
         
         if not self._is_parameters_set():
             return
-        print('Running Temp Databricks Port....')
+        print('Running Temp Databricks Port..')
         print('Setting up Sf Connection..')
         sf_conn, sf_cur = set_snowflake_connection(snowflake_secret_name, self._aws_access, self._aws_secret)
         
