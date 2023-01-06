@@ -33,10 +33,8 @@ def test():
     }
 
     # Secrets/other
-    ADVERTISER_ID = 'ca5g5oz'
-    ttd_user = "ttd_api_hregxvd@chalice.com"
-    secret_key = 'uar6lmos5mfccyjb26yhcepab3bmccel'
-    segment_name = "TEST"
+    segment_name = "TEST_user_scoring_AIRFLOW"
+    user_scoring_secret = "CHALICE_TTD_USER_SCORING_CREDENTIALS"
 
     snowflake_secret_name = 'chalice-dev-config-snowflake-credentials'
 
@@ -44,7 +42,7 @@ def test():
   
     csv_list = my_user_scoring.run_user_scoring(snowflake_secret_name)
 
-    my_user_scoring.push_to_TTD(csv_list, 'sds', 'sds', 'sdd')
+    my_user_scoring.push_to_TTD(csv_list, segment_name, user_scoring_secret)
 
 if __name__ == '__main__':
     test()

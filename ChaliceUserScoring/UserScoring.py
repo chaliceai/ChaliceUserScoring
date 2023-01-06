@@ -84,18 +84,7 @@ def csv_read_stream(file):
 
 def set_snowflake_connection(snowflake_secret_name, aws_access, aws_secret):
     try:
-        my_config = Config(
-            region_name = 'us-east-1',
-            signature_version = 'v4',
-            retries = {
-                'max_attempts': 10,
-                'mode': 'standard'
-            }
-        )
-        client = boto3.client('secretsmanager', aws_access_key_id=aws_access, aws_secret_access_key=aws_secret,config=my_config)
-        snowflake_credentials = client.get_secret_value(SecretId=snowflake_secret_name)
-        snowflake_credentials = json.loads(snowflake_credentials['SecretString'])
-
+        snowflake_credentials = get_secret(snowflake_secret_name, aws_access, aws_secret)
         sf_conn = snowflake.connector.connect(
             user = snowflake_credentials['dbUser'],
             account = 'mja29153.us-east-1',
@@ -110,6 +99,19 @@ def set_snowflake_connection(snowflake_secret_name, aws_access, aws_secret):
     except Exception as err:
         print(err)
 
+def get_secret(secret_name, aws_access, aws_secret):
+    my_config = Config(
+            region_name = 'us-east-1',
+            signature_version = 'v4',
+            retries = {
+                'max_attempts': 10,
+                'mode': 'standard'
+            }
+    )
+    client = boto3.client('secretsmanager', aws_access_key_id=aws_access, aws_secret_access_key=aws_secret,config=my_config)
+    credentials = client.get_secret_value(SecretId=secret_name)
+    credentials = json.loads(credentials['SecretString'])
+    return credentials
 
 class UserScoring:
 
@@ -240,7 +242,7 @@ class UserScoring:
         df, X, Y = data_prep(sf_cur, self._train_table_name, 
                              self._train_table_attributes, self._null_threshold)
 
-        print('Training Model')
+        print('Training Model..')
         clf, categorical_feature_indicies = train_model(X, Y, self._test_proportion,
                                                         self._bootstrap_type, self._depth, 
                                                         self._learning_rate, self._loss_function,
@@ -263,9 +265,8 @@ class UserScoring:
         
         return csv_files
     
-    # TODO get each csv in s3 then push that. Only loading in one at a time.
-    # This is to avoid having all of them in memory
-    def push_to_TTD(self, csv_files_list, advertiser_id, segment_name, secret_key):
+    
+    def push_to_TTD(self, csv_files_list, segment_name, user_scoring_secret):
         import time
         import datetime as dt
 
@@ -278,15 +279,9 @@ class UserScoring:
         results = []
         num_files = len(csv_files_list)
 
-        my_config = Config(
-            region_name = 'us-east-1',
-            signature_version = 'v4',
-            retries = {
-                'max_attempts': 10,
-                'mode': 'standard'
-            }
-        )
-        s3 = boto3.client('s3', aws_access_key_id=self._aws_access, aws_secret_access_key=self._aws_secret,config=my_config) 
+        user_scoring_credentials = get_secret(user_scoring_secret, self._aws_access, self._aws_secret)
+
+        s3 = boto3.client('s3', aws_access_key_id=self._aws_access, aws_secret_access_key=self._aws_secret, region_name='us-east-1') 
         print(f'{num_files} Files found starting to upload..')
         for i, csv_file_name in enumerate(csv_files_list):
             print(f'Uploading chunk {i + 1}/{num_files}')
@@ -295,10 +290,10 @@ class UserScoring:
             data = obj['Body']
 
             try:
-                result = post_data(advertiser_id=advertiser_id,
+                result = post_data(advertiser_id=user_scoring_credentials['ttd_advertising_id'],
                                     scores_csv=data,
                                     segment_name=segment_name,
-                                    secret_key=secret_key)
+                                    secret_key=user_scoring_credentials['ttd_access_key'])
                 data.close()    
             except UnicodeDecodeError as e:
                 print(f'**FAILED** Unable to read {csv_file_name}. Skipping...')

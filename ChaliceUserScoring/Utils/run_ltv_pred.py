@@ -23,8 +23,11 @@ def data_prep(cur, snowflake_table_train_name, train_table_attributes,
 
     df = training_data(cur, snowflake_table_train_name, train_table_attributes)
 
+    print('Fixing Nulls and Types...')
     dataframe = fix_nulls_and_types(df, null_threshold, nulls='Yes', types='Yes',
                                     val=0)
+
+    print('Running Log Transform...')
     X, Y= log_transform(dataframe)
     
     return df, X, Y

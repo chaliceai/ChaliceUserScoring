@@ -14,13 +14,12 @@ should take in :
     traininng table name
     training table attributes list
 """
-def training_data(cur, snowflake_table_train, table_attributes,sample_size=None): 
+def training_data(cur, snowflake_table_train, table_attributes,sample_size=15): 
 
     attributes = ', '.join(table_attributes)
-    sql = f"SELECT {attributes} FROM {snowflake_table_train} SAMPLE(15)" #LIMIT ADDED FOR TESTING
-    if(sample_size != None):
-        sql = sql + f"sample({sample_size})"
-
+    sql = f"SELECT {attributes} FROM {snowflake_table_train} sample({sample_size})" #LIMIT ADDED FOR TESTING
+    print(f'Query being run: \n {sql}')
+    
     cur.execute(sql)
     df = cur.fetch_pandas_all()
     return df
